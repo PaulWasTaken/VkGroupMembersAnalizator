@@ -17,4 +17,6 @@ def parse_members(data):
 
 
 def extract_code(data):
+    if "error" in data:
+        raise ConnectionError  # Think
     return findall("(?<==)[^ ]+", data)[0]

@@ -1,8 +1,10 @@
+import logging
 import socket
 import webbrowser
 
 from formatter import extract_code, parse_members, parse_token
 from select import select
+from sys import stdout
 from threading import Timer
 from time import time
 from urllib.request import urlopen
@@ -24,6 +26,8 @@ class VkWorker:
     def get_group_members(group_id, token, version):
         current_pos = 0
         total_amount = 9223372036854775807
+        printer = VkWorker.print_progress()
+        printer.send(None)
         while current_pos != total_amount:
             resp = VkWorker.get_url_response(
                 VkWorker.api_url,
@@ -35,8 +39,23 @@ class VkWorker:
             )
             total_amount, ids = parse_members(resp)
             current_pos += len(ids)
+            printer.send((current_pos, total_amount))
             for member in ids:
                 yield member
+
+    @staticmethod
+    def print_progress():
+        to_write = ""
+        while 1:
+            current, total = yield
+            percent = round((current / total) * 100, 2)
+            stdout.write("\r" + " " * len(to_write))
+            stdout.flush()
+            to_write = "{amount}% was processed.".format(amount=percent)
+            stdout.write("\r" + to_write)
+            stdout.flush()
+            if current == total:
+                break
 
     @staticmethod
     def get_access_token(id_, port, api_version, key):
