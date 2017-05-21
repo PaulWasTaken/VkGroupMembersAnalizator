@@ -1,7 +1,8 @@
 import argparse
 
 from birthday import Birthday
-from methods.methods import log_on, get_median, get_dispersion
+from formatter import ParseError
+from methods.methods import get_median, get_dispersion
 from server_worker import VkWorker
 from socket import timeout
 
@@ -22,20 +23,18 @@ class Application:
         self.median = None
         self.dispersion = None
 
-        if settings.debug:
-            log_on()
-
     def run(self):
         try:
             self.get_access_token()
-        except (timeout, ConnectionError):
-            print("Server has not responded.")
-            return
-
-        try:
             self.get_results()
             print("\nMedian: {}; Dispersion: {}."
                   .format(self.median, self.dispersion))
+        except ParseError:
+            print("Something with server response. It was printed in logs.")
+            return
+        except timeout:
+            print("Server has not responded.")
+            return
         except KeyboardInterrupt:
             print("\nInterrupted.")
             return
@@ -47,9 +46,9 @@ class Application:
             try:
                 dates.append(Birthday(member["bdate"]).get_total_age())
             except AttributeError:
-                continue    # A person turned off showing his birth year.
+                continue  # A person turned off showing his birth year.
             except KeyError:
-                continue    # A person hide his birth date.
+                continue  # A person hide his birth date.
         self.median, self.dispersion = get_median(dates), get_dispersion(dates)
 
     def get_access_token(self):
@@ -62,6 +61,4 @@ if __name__ == "__main__":
     p = argparse.ArgumentParser()
     p.add_argument("group", metavar="group",
                    help="Set the group name you want to be analyzed.")
-    p.add_argument("-d", dest="debug", action='store_true',
-                   help="Enable printing statuses.")
     Application(p.parse_args()).run()

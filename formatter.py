@@ -1,22 +1,37 @@
-from json import loads
+from json import loads, dump
 from re import findall
 
 
-def parse_token(data):
-    if "error" in data:
-        raise ConnectionError  # Think
-    res = loads(data)
+class ParseError:
+    pass
+
+
+def pre_processing(func):
+    def printer(data):
+        res = loads(data)
+        if "error" in res:
+            with open('log.log', 'w') as outfile:
+                dump(data, outfile)
+            raise ParseError
+        return func(res)
+    return printer
+
+
+@pre_processing
+def parse_token(res):
     return res['access_token'], res['expires_in'], res['user_id']
 
 
-def parse_members(data):
-    if "error" in data:
-        raise ConnectionError  # Think
-    res = loads(data)
-    return res['response']['count'], res['response']['items']
+@pre_processing
+def parse_members(res):
+    try:
+        return int(res['response']['count']), res['response']['items']
+    except TypeError:
+        users = []
+        for i in range(20):
+            users.extend(res['response'][i]['users'])
+        return users
 
 
 def extract_code(data):
-    if "error" in data:
-        raise ConnectionError  # Think
     return findall("(?<==)[^ ]+", data)[0]

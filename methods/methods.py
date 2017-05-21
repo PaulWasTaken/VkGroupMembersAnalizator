@@ -1,14 +1,5 @@
-import logging
-
 from collections import Counter
 from math import floor
-
-
-def log_on():
-    logging.basicConfig(
-        level=logging.DEBUG, filename=u'log.log', filemode="a",
-        format=u'%(filename)s#[LINE:%(lineno)d] [%(asctime)s]  %(message)s')
-    logging.debug("\nThe application was started.\n")
 
 
 def get_median(dates):

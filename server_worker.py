@@ -1,12 +1,13 @@
-import logging
 import socket
 import webbrowser
+from json import dump
 
 from formatter import extract_code, parse_members, parse_token
 from select import select
 from sys import stdout
 from threading import Timer
 from time import time
+from urllib.parse import quote
 from urllib.request import urlopen
 
 
@@ -21,14 +22,21 @@ class VkWorker:
                 "code={code}"
     api_url = "https://api.vk.com/method/{method}" \
               "?{params}&access_token={token}&v={api_version}"
+    api_execute_url = "https://api.vk.com/method/execute?" \
+                      "code={code}&version={api_version}&access_token={token}"
 
     @staticmethod
-    def get_group_members(group_id, token, version):
+    def make_prep():
         current_pos = 0
         total_amount = 9223372036854775807
         printer = VkWorker.print_progress()
         printer.send(None)
-        while current_pos != total_amount:
+        return current_pos, total_amount, printer
+
+    @staticmethod
+    def get_group_members(group_id, token, version):
+        current_pos, total_amount, printer = VkWorker.make_prep()
+        while current_pos < total_amount:
             resp = VkWorker.get_url_response(
                 VkWorker.api_url,
                 {"method": "groups.getMembers",
@@ -38,10 +46,45 @@ class VkWorker:
                  "api_version": version}
             )
             total_amount, ids = parse_members(resp)
+            if total_amount > 90000:
+                yield from VkWorker.get_group_members_enh(
+                    group_id, token, version,
+                    current_pos, total_amount, printer)
+                break
             current_pos += len(ids)
             printer.send((current_pos, total_amount))
             for member in ids:
                 yield member
+
+    @staticmethod
+    def get_group_members_enh(group_id, token, version, current_pos, total,
+                              printer):
+        while current_pos < total:
+            code = VkWorker.form_code(current_pos, group_id)
+            resp = VkWorker.get_url_response(
+                VkWorker.api_execute_url,
+                {"code": code,
+                 "token": token,
+                 "api_version": version}
+            )
+            ids = parse_members(resp)
+            current_pos += len(ids)
+            printer.send((current_pos, total))
+            for member in ids:
+                yield member
+
+    @staticmethod
+    def form_code(start, group):
+        methods_list = []
+        for i in range(20):
+            methods_list.append('''
+            API.groups.getMembers(
+                {{"fields": "bdate",
+                "group_id":"{}",
+                "offset":"{}"}})'''.format(group, str(start + i * 1000)))
+        return quote("return [{}];".format(",".join(
+            [method.replace("\n", "").replace(" ", "")
+             for method in methods_list])))
 
     @staticmethod
     def print_progress():
