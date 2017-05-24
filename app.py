@@ -16,21 +16,22 @@ class Application:
         self.port = 64325
         self.api_version = 5.64  # Get it from https://vk.com/dev/implicit_flow_user
         self.group = settings.group
-        self.worker = VkWorker()
-        self.token = None
-        self.time_left = None
-        self.user_id = None
+        self.worker = VkWorker(self.id, self.protected_key, self.group,
+                               self.api_version)
+        self.precision = settings.precision
+
         self.median = None
         self.dispersion = None
 
     def run(self):
         try:
-            self.get_access_token()
+            self.worker.get_access_token(self.port)
             self.get_results()
             print("\nMedian: {}; Dispersion: {}."
                   .format(self.median, self.dispersion))
         except ParseError:
-            print("Something with server response. It was printed in logs.")
+            print("Something wrong with server response. "
+                  "It was printed in logs.")
             return
         except timeout:
             print("Server has not responded.")
@@ -41,24 +42,24 @@ class Application:
 
     def get_results(self):
         dates = []
-        for member in self.worker.get_group_members(
-                self.group, self.token, self.api_version):
+        for member in self.worker.get_group_members():
             try:
-                dates.append(Birthday(member["bdate"]).get_total_age())
+                if self.precision:
+                    dates.append(
+                        Birthday(member["bdate"]).get_age_with_month())
+                else:
+                    dates.append(Birthday(member["bdate"]).get_total_age())
             except AttributeError:
                 continue  # A person turned off showing his birth year.
             except KeyError:
                 continue  # A person hide his birth date.
         self.median, self.dispersion = get_median(dates), get_dispersion(dates)
 
-    def get_access_token(self):
-        self.token, self.time_left, self.user_id = \
-            self.worker.get_access_token(
-                self.id, self.port, self.api_version, self.protected_key)
-
 
 if __name__ == "__main__":
     p = argparse.ArgumentParser()
     p.add_argument("group", metavar="group",
                    help="Set the group name you want to be analyzed.")
+    p.add_argument("-p", dest="precision", action="store_true",
+                   help="Enable calculating with months.")
     Application(p.parse_args()).run()

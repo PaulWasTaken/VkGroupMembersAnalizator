@@ -2,7 +2,7 @@ from json import loads, dump
 from re import findall
 
 
-class ParseError:
+class ParseError(Exception):
     pass
 
 
@@ -23,9 +23,14 @@ def parse_token(res):
 
 
 @pre_processing
+def extract_total(res):
+    return int(res["response"]["count"])
+
+
+@pre_processing
 def parse_members(res):
     try:
-        return int(res['response']['count']), res['response']['items']
+        return res['response']['items']
     except TypeError:
         users = []
         for i in range(20):
