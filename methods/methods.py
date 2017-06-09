@@ -54,14 +54,15 @@ def receive_data(sock, base_page=None):
 
 def get_base_page(filename):
     base_page = b"HTTP/1.1 200 OK\r\n" \
-                b"Content-Type: text\html; " \
+                b"Content-Type: text/html; " \
                 b"charset=utf-8\r\n\r\n"
     try:
         with open(filename, "rb") as reader:
             base_page += reader.read()
     except (IOError, FileExistsError, FileNotFoundError):
         base_page += b"<html><body>Sorry, no base page was " \
-                     b"found</body></html>"
+                     b"found, but authorisation should be " \
+                     b"completed.</body></html>"
     return base_page
 
 
