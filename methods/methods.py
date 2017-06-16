@@ -8,6 +8,8 @@ from threading import Timer
 from time import time
 from urllib.request import urlopen
 
+BUFFER = 4096
+
 
 def get_median(dates):
     sorted_dates = sorted(dates)
@@ -45,7 +47,7 @@ def receive_data(sock, base_page=None):
         for s in r:
             if s == sock:
                 conn, addr = sock.accept()
-                data = conn.recv(4096).decode()
+                data = conn.recv(BUFFER).decode()
                 if base_page:
                     conn.sendto(base_page, addr)
                 return data

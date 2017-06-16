@@ -27,7 +27,7 @@ def form_exec_request(start, group):
 
 class VkWorker:
     auth_url = "https://oauth.vk.com/authorize?client_id={id}" \
-               "&scope=audio&redirect_uri=http://localhost:{port}" \
+               "&redirect_uri=http://localhost:{port}" \
                "&v={api_version}&response_type=code"
     token_url = "https://oauth.vk.com/access_token?" \
                 "client_id={id}&" \
